@@ -77,3 +77,36 @@ send to the Hermes server must have the following format
 
 Note that the labels defined in the JSON packets must match the labels defined in the
 `Hermes` configuration file
+
+## Python Client Library
+
+`Hermes` has a client library written in python (Go version coming soon). The package can be
+installed with
+
+```console
+pip install python-hermes
+```
+
+Two high-level utility functions are provided, mainly `push_gauge` and `push_counter`, which
+are used to push gauges and counters respectively. The following Python snippet illustrates
+how to use the client
+
+```python
+from hermes import push_gauge, push_counter, set_hermes_config
+
+# set hermes configuration
+set_hermes_config('localhost', 7789)
+
+# push new counter metric
+counter_data = {
+    'label_1': 'testing python client'
+}
+push_counter(metric_name='sample_counter', labels=counter_data)
+
+# set new gauge value
+gauge_data = {
+    'label_1': 'testing python client twice',
+    'label_2': 'testing python client thrice
+}
+push_gauge(metric_name='sample_gauge', value=65.6, labels=gauge_data)
+```

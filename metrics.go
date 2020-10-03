@@ -65,7 +65,7 @@ func GenerateLabels(labels map[string]string, metricType, metricName string) pro
     case "gauge":
         for _, gauge := range(Config.Gauges) {
             if gauge.MetricName == metricName {
-                // create counter labels
+                // create labels for counter instance
                 promLabels = SetPrometheusLabels(labels, gauge.Labels)
             }
         }
