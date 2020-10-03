@@ -1,0 +1,17 @@
+{
+    "service_name": "testing-service",
+    "gauges": [
+        {
+            "metric_name": "sample_gauge",
+            "metric_description": "gauges are awesome",
+            "labels": ["label_1", "label_2"]
+        }
+    ],
+    "counters": [
+        {
+            "metric_name": "sample_counter",
+            "metric_description": "counters are awesome too",
+            "labels": ["label_1"]
+        }
+    ]
+}
