@@ -31,5 +31,5 @@ def example_job_wrapper():
 
 if __name__ == '__main__':
 
-    set_hermes_config('localost', 7789)
+    set_hermes_config('localhost', 7789)
     example_job_wrapper()

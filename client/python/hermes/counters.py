@@ -7,8 +7,8 @@ from typing import Dict
 
 from pydantic import ValidationError
 
+from hermes import hermes
 from hermes.models import PrometheusCounter
-from hermes.hermes import HERMES_HOST, HERMES_PORT
 from hermes.hermes import push_udp_packet, set_hermes_config
 from hermes.exceptions import InvalidMetricException
 
@@ -28,7 +28,7 @@ def increment_counter(metric_name: str, labels: Dict[str, str]):
             values
     """
     # set hermes configuration if not been set before
-    if None in (HERMES_HOST, HERMES_PORT):
+    if None in (hermes.HERMES_HOST, hermes.HERMES_PORT):
         LOGGER.warn('hermes configuration not set. setting host to default localhost:7789')
         set_hermes_config()
     try:

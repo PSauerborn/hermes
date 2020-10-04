@@ -1,6 +1,6 @@
 # __init__.py
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 from hermes.gauges import set_gauge, increment_gauge, decrement_gauge, \
     gauge_wrapper, hermes_gauge
