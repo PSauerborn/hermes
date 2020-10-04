@@ -74,13 +74,40 @@ send to the Hermes server must have the following format
 
 ```json
 {
-    "metric_name": "gauge",
+    "metric_name": "sample_gauge",
     "payload": {
         "labels": {
             "label_1": "testing label 1",
             "label_2": "testing label 2"
         },
-        "value": 65.4
+        "operation": "increment"
+    }
+}
+```
+
+```json
+{
+    "metric_name": "sample_gauge",
+    "payload": {
+        "labels": {
+            "label_1": "testing label 1",
+            "label_2": "testing label 2"
+        },
+        "operation": "decrement"
+    }
+}
+```
+
+```json
+{
+    "metric_name": "sample_gauge",
+    "payload": {
+        "labels": {
+            "label_1": "testing label 1",
+            "label_2": "testing label 2"
+        },
+        "value": 65.4,
+        "operation": "set"
     }
 }
 ```

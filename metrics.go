@@ -17,6 +17,7 @@ var (
     ErrInvalidCounter = errors.New("invalid gauge configuration")
     ErrUnregisteredMetric = errors.New("unregistered metric")
     ErrInvalidGaugeOperation = errors.New("invalid gauge operation")
+    ErrInvalidLabels = errors.New("invalid label configuration")
 )
 
 // function used to start new prometheus server
@@ -45,48 +46,80 @@ func GetMetricType(metric string) *string {
     return nil
 }
 
+// function used to determine if a slice of strings
+// contains a particular item/string
+func SliceContains(slice []string, val string) bool {
+    for _, value := range(slice) {
+        if value == val {
+            return true
+        }
+    }
+    return false
+}
+
+// function sued to determine if a given set of labels
+// matches the label configuration expected for the
+// specified metric
+func IsValidLabelConfig(receivedLabels map[string]string, expectedLabels []string) bool {
+    // iterate over keys of expected labels
+    for key := range(receivedLabels) {
+        if !SliceContains(expectedLabels, key) {
+            return false
+        }
+    }
+    return true
+}
+
 // function used to convert labels into prometheus.Labels instance
 // by filtering out the lables that are included both on the global
 // hermes configuration file and the JSON from the UDP packet
-func SetPrometheusLabels(labels map[string]string, labelConfig []string) prometheus.Labels {
+func SetPrometheusLabels(labels map[string]string, labelConfig []string) (prometheus.Labels, error) {
+    if !IsValidLabelConfig(labels, labelConfig) {
+        log.Error(fmt.Sprintf("invalid label configuration. expecting %d but received %d", len(labels), len(labelConfig)))
+        return prometheus.Labels{}, ErrInvalidLabels
+    }
     promLabels := prometheus.Labels{}
     for _, metricLabel := range(labelConfig) {
         if label, ok := labels[metricLabel]; ok {
             promLabels[metricLabel] = label
         }
     }
-    return promLabels
+    return promLabels, nil
 }
 
 // function used to generate prometheus labels based on config.
 // note that the labels provided in the UDP packet are not set
 // on the counter/gauge unless they have also been defined in
 // the JSON config file
-func GenerateLabels(labels map[string]string, metricType, metricName string) prometheus.Labels {
-    var promLabels prometheus.Labels
+func GenerateLabels(labels map[string]string, metricType, metricName string) (prometheus.Labels, error) {
+    var (promLabels prometheus.Labels; err error)
     switch metricType {
     case "counter":
         for _, counter := range(Config.Counters) {
             if counter.MetricName == metricName {
-                promLabels = SetPrometheusLabels(labels, counter.Labels)
+                promLabels, err = SetPrometheusLabels(labels, counter.Labels)
             }
         }
     case "gauge":
         for _, gauge := range(Config.Gauges) {
             if gauge.MetricName == metricName {
                 // create labels for counter instance
-                promLabels = SetPrometheusLabels(labels, gauge.Labels)
+                promLabels, err = SetPrometheusLabels(labels, gauge.Labels)
             }
         }
     }
-    return promLabels
+    return promLabels, err
 }
 
 // function used to increment a particular counter
 func IncrementCounter(name string, counterJson CounterJSON) error {
     if counter, ok := Counters[name]; ok {
         log.Info(fmt.Sprintf("incrementing counter '%s' %v", name, counter))
-        labels := GenerateLabels(counterJson.Labels, "counter", name)
+        // generate labels for prometheus metric and check for errors
+        labels, err := GenerateLabels(counterJson.Labels, "counter", name)
+        if err != nil {
+            return err
+        }
         counter.With(labels).Inc()
         return nil
     }
@@ -97,7 +130,11 @@ func IncrementCounter(name string, counterJson CounterJSON) error {
 func SetGauge(name string, gaugeJson GaugeJSON) error {
     if gauge, ok := Gauges[name]; ok {
         log.Info(fmt.Sprintf("setting gauge '%s' %v", name, gauge))
-        labels := GenerateLabels(gaugeJson.Labels, "gauge", name)
+        // generate labels for prometheus metric and check for errors
+        labels, err := GenerateLabels(gaugeJson.Labels, "gauge", name)
+        if err != nil {
+            return err
+        }
         gauge.With(labels).Set(*gaugeJson.Value)
         return nil
     }
@@ -108,7 +145,11 @@ func SetGauge(name string, gaugeJson GaugeJSON) error {
 func IncrementGauge(name string, gaugeJson GaugeJSON) error {
     if gauge, ok := Gauges[name]; ok {
         log.Info(fmt.Sprintf("incrementing gauge '%s' %v", name, gauge))
-        labels := GenerateLabels(gaugeJson.Labels, "gauge", name)
+        // generate labels for prometheus metric and check for errors
+        labels, err := GenerateLabels(gaugeJson.Labels, "gauge", name)
+        if err != nil {
+            return err
+        }
         gauge.With(labels).Inc()
         return nil
     }
@@ -119,7 +160,11 @@ func IncrementGauge(name string, gaugeJson GaugeJSON) error {
 func DecrementGauge(name string, gaugeJson GaugeJSON) error {
     if gauge, ok := Gauges[name]; ok {
         log.Info(fmt.Sprintf("decrementing gauge '%s' %v", name, gauge))
-        labels := GenerateLabels(gaugeJson.Labels, "gauge", name)
+        // generate labels for prometheus metric and check for errors
+        labels, err := GenerateLabels(gaugeJson.Labels, "gauge", name)
+        if err != nil {
+            return err
+        }
         gauge.With(labels).Dec()
         return nil
     }

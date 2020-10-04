@@ -3,6 +3,7 @@ package main
 import (
     "fmt"
     "net"
+    "time"
     "encoding/json"
     log "github.com/sirupsen/logrus"
 )
@@ -17,21 +18,42 @@ func main() {
         log.Fatal(fmt.Errorf("error loading hermes configuration: %v", err))
     }
     log.Debug(fmt.Sprintf("starting new hermes server with configuration %+v", config))
+    // create new hermes server instance and listen on go routine
+    service = New(config)
+    go ListenHermes(service)
 
-    // begin listening to prometheus server on
-    go ListenHermes(config)
+    // begin listening to prometheus server on port 8080
     ListenPrometheus(config)
+}
+
+// function used to create new hermes service instance
+func New(config HermesConfig) *HermesServer {
+    addr := net.UDPAddr{IP: net.ParseIP(*config.ListenAddress), Port: *config.ListenPort}
+    socket, err := net.ListenUDP("udp", &addr)
+    if err != nil {
+        log.Fatal(fmt.Errorf("unable to start new hermes server: %v", err))
+    }
+    return &HermesServer{Socket: socket, ListenAddress: &addr, Config: &config}
 }
 
 // function used to start listening on the specified UDP
 // ports for JSON messages from a Hermes client. All incoming
 // messages are read into a buffer and then converted to
 // JSON format by the handler function
-func ListenHermes(config HermesConfig) {
-    // create new hermes instance
-    service = New(config)
+func ListenHermes(server *HermesServer) {
+    // restart hermes socket if any panic issues arise during processing of messages
+    defer func() {
+        if r := recover(); r != nil {
+            log.Warn(fmt.Sprintf("recovered paniced UDP interface: %+v", r))
+            service.RestartServer(*server.Config)
+        }
+    }()
+    // defer closing of connection
+    defer service.Socket.Close()
+
     // create new buffer and serve messages
     buffer := make([]byte, MaxBufferSize)
+
     for {
         // read UDP packet payload into buffer
         n, remoteAddr, err := service.Socket.ReadFromUDP(buffer)
@@ -45,20 +67,31 @@ func ListenHermes(config HermesConfig) {
     }
 }
 
-// function used to create new hermes service instance
-func New(config HermesConfig) *HermesServer {
-    addr := net.UDPAddr{IP: net.ParseIP(*config.ListenAddress), Port: *config.ListenPort}
-    socket, err := net.ListenUDP("udp", &addr)
-    if err != nil {
-        log.Fatal(fmt.Errorf("unable to start new hermes server: %v", err))
-    }
-    return &HermesServer{Socket: socket, ListenAddress: &addr, Config: &config}
-}
-
 type HermesServer struct {
     Socket		  *net.UDPConn
     ListenAddress *net.UDPAddr
     Config 		  *HermesConfig
+}
+
+// function used to safely restart hermes server. the UDP connection
+// is first closed via the socket connection. The connection is then
+// re-established. If the re-creation of the socket fails, the go-routine
+// will wait 10 seconds before attempting to re-open the connection
+func(server HermesServer) RestartServer(config HermesConfig) {
+    // close socket and restart
+    service.Socket.Close()
+    addr := net.UDPAddr{IP: net.ParseIP(*config.ListenAddress), Port: *config.ListenPort}
+    for {
+        socket, err := net.ListenUDP("udp", &addr)
+        if err != nil {
+            log.Error(fmt.Errorf("unable to start new hermes server: %v", err))
+            time.Sleep(time.Second * 10)
+        } else {
+            service.Socket = socket
+            break
+        }
+    }
+    ListenHermes(&server)
 }
 
 // function used to process UDP packets sent over UDP interface.
