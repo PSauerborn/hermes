@@ -22,5 +22,6 @@ COPY --from=build /app/server/hermes ./
 RUN chmod +x ./hermes
 
 EXPOSE 7789/udp
+EXPOSE 8080
 
 CMD [ "./hermes" ]

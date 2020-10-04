@@ -43,6 +43,16 @@ Note that currently only one service name is supported per Hermes instance, as H
 to be a side-cart application for applications deployed on Docker Swarm, Kubernetes and similar
 container orchestration platforms.
 
+The following `Dockerfile` illustrates how to use the `Hermes` image
+
+```dockerfile
+FROM psauerborn/hermes
+
+COPY ./hermes_config.json ./
+
+ENV CONFIG_FILE_PATH=./hermes_config.json
+```
+
 The UDP interface by default listens on port `7789`, which can be configured in the environment
 variables of the container, while the `Prometheus` interface listens on port `8080`. The UDP packets
 send to the Hermes server must have the following format
