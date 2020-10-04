@@ -45,7 +45,7 @@ func ListenHermes(server *HermesServer) {
     defer func() {
         if r := recover(); r != nil {
             log.Warn(fmt.Sprintf("recovered paniced UDP interface: %+v", r))
-            service.RestartServer(*server.Config)
+            service.RestartServer()
         }
     }()
     // defer closing of connection
@@ -77,10 +77,10 @@ type HermesServer struct {
 // is first closed via the socket connection. The connection is then
 // re-established. If the re-creation of the socket fails, the go-routine
 // will wait 10 seconds before attempting to re-open the connection
-func(server HermesServer) RestartServer(config HermesConfig) {
+func(server HermesServer) RestartServer() {
     // close socket and restart
     service.Socket.Close()
-    addr := net.UDPAddr{IP: net.ParseIP(*config.ListenAddress), Port: *config.ListenPort}
+    addr := net.UDPAddr{IP: net.ParseIP(*service.Config.ListenAddress), Port: *service.Config.ListenPort}
     for {
         socket, err := net.ListenUDP("udp", &addr)
         if err != nil {
