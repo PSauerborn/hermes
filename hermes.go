@@ -9,7 +9,6 @@ import (
 
 var service *HermesServer
 
-// start new instance of hermes server
 func main() {
     ConfigureService()
     // parse and load Hermes configuration from local JSON file
@@ -24,6 +23,10 @@ func main() {
     ListenPrometheus(config)
 }
 
+// function used to start listening on the specified UDP
+// ports for JSON messages from a Hermes client. All incoming
+// messages are read into a buffer and then converted to
+// JSON format by the handler function
 func ListenHermes(config HermesConfig) {
     // create new hermes instance
     service = New(config)
@@ -37,7 +40,7 @@ func ListenHermes(config HermesConfig) {
             log.Error(fmt.Errorf("unable to process UDP message: %v", err))
             continue
         }
-        // send message to heracles server to process message
+        // handle UDP packet
         service.ProcessPayload(buffer[0:n])
     }
 }
@@ -58,7 +61,13 @@ type HermesServer struct {
     Config 		  *HermesConfig
 }
 
-// define function used to process payload
+// function used to process UDP packets sent over UDP interface.
+// all packets are read into a buffer, and the contents of the
+// buffer are then converted into JSON format. The metric name
+// is sent with all JSON packets, which is then used to determine
+// the type of metric that the JSON packet corresponds to (i.e.
+// counter or gauge) and the payload is then processed depending on
+// the type of metric
 func(server HermesServer) ProcessPayload(packet []byte) {
     log.Debug(fmt.Sprintf("processing new hermes payload %s", string(packet)))
     var payload HermesPayload
@@ -94,6 +103,6 @@ func(server HermesServer) ProcessPayload(packet []byte) {
             log.Error(fmt.Sprintf("cannot process metric. invalid JSON"))
             return
         }
-        SetGauge(payload.MetricName, gauge)
+        ProcessGauge(payload.MetricName, gauge)
     }
 }

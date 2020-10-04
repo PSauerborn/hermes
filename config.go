@@ -13,13 +13,10 @@ var (
     ErrInvalidConfig = errors.New("invalid hermes configuration")
 )
 
-
-// function used to validate the Hermes configuration instance
-func ValidateConfig(config HermesConfig) error {
-    return nil
-}
-
-// function used to load config from local file path
+// function used to generate HermesConfig instance from
+// the local JSON configuration file. Additionally, if
+// the listen address and port are not specified, the default
+// values are assigned to the config
 func LoadConfig(path string) (HermesConfig, error) {
     var config HermesConfig
 

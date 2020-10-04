@@ -16,8 +16,11 @@ var (
     ErrInvalidGauge = errors.New("invalid gauge configuration")
     ErrInvalidCounter = errors.New("invalid gauge configuration")
     ErrUnregisteredMetric = errors.New("unregistered metric")
+    ErrInvalidGaugeOperation = errors.New("invalid gauge operation")
 )
 
+// function used to start new prometheus server
+// to scrape metrics from Hermes
 func ListenPrometheus(config HermesConfig) {
     // create prometheus metric objects from configuration
     InitializeMetrics(config)
@@ -26,7 +29,8 @@ func ListenPrometheus(config HermesConfig) {
     log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-// function used to determin metric type
+// function used to determine the metric type i.e.
+// based on a particular metric name
 func GetMetricType(metric string) *string {
     // check if metric is present in registered counters
     if _, ok := Counters[metric]; ok {
@@ -42,6 +46,8 @@ func GetMetricType(metric string) *string {
 }
 
 // function used to convert labels into prometheus.Labels instance
+// by filtering out the lables that are included both on the global
+// hermes configuration file and the JSON from the UDP packet
 func SetPrometheusLabels(labels map[string]string, labelConfig []string) prometheus.Labels {
     promLabels := prometheus.Labels{}
     for _, metricLabel := range(labelConfig) {
@@ -52,7 +58,10 @@ func SetPrometheusLabels(labels map[string]string, labelConfig []string) prometh
     return promLabels
 }
 
-// function used to generate prometheus labels based on config
+// function used to generate prometheus labels based on config.
+// note that the labels provided in the UDP packet are not set
+// on the counter/gauge unless they have also been defined in
+// the JSON config file
 func GenerateLabels(labels map[string]string, metricType, metricName string) prometheus.Labels {
     var promLabels prometheus.Labels
     switch metricType {
@@ -84,18 +93,68 @@ func IncrementCounter(name string, counterJson CounterJSON) error {
     return ErrUnregisteredMetric
 }
 
-// function used to set a particular gauge
+// function used to set the value on a particular gauge
 func SetGauge(name string, gaugeJson GaugeJSON) error {
     if gauge, ok := Gauges[name]; ok {
         log.Info(fmt.Sprintf("setting gauge '%s' %v", name, gauge))
         labels := GenerateLabels(gaugeJson.Labels, "gauge", name)
-        gauge.With(labels).Set(gaugeJson.Value)
+        gauge.With(labels).Set(*gaugeJson.Value)
         return nil
     }
     return ErrUnregisteredMetric
 }
 
-// function used to create new gauge
+// function used to increment gauge a particular gauge value
+func IncrementGauge(name string, gaugeJson GaugeJSON) error {
+    if gauge, ok := Gauges[name]; ok {
+        log.Info(fmt.Sprintf("incrementing gauge '%s' %v", name, gauge))
+        labels := GenerateLabels(gaugeJson.Labels, "gauge", name)
+        gauge.With(labels).Inc()
+        return nil
+    }
+    return ErrUnregisteredMetric
+}
+
+// function used to decrement a particular gauge value
+func DecrementGauge(name string, gaugeJson GaugeJSON) error {
+    if gauge, ok := Gauges[name]; ok {
+        log.Info(fmt.Sprintf("decrementing gauge '%s' %v", name, gauge))
+        labels := GenerateLabels(gaugeJson.Labels, "gauge", name)
+        gauge.With(labels).Dec()
+        return nil
+    }
+    return ErrUnregisteredMetric
+}
+
+// function used to call correct handler for gauge operations.
+// currently, gauge operations support incrementing, deprecating,
+// and setting of values.
+func ProcessGauge(name string, gaugeJson GaugeJSON) error {
+    switch gaugeJson.Operation {
+        // increment gauge
+    case "increment":
+        return IncrementGauge(name, gaugeJson)
+        // decrement gauge
+    case "decrement":
+        return DecrementGauge(name, gaugeJson)
+    case "set":
+        // ensure that values has been specified if setting gauge
+        if gaugeJson.Value != nil {
+            return SetGauge(name, gaugeJson)
+        } else {
+            log.Error(fmt.Sprintf("gauge cannot be set without value"))
+            return ErrInvalidGaugeOperation
+        }
+    default:
+        log.Error(fmt.Sprintf("received invalid gauge operation '%s'", gaugeJson.Operation))
+        return ErrInvalidGaugeOperation
+    }
+}
+
+// function used to create new gauge instance. Pointers to the
+// prometheus gauges are stored in the global Gauges map, which
+// maps the name of the gauge/metric to the prometheus pointer
+// that stores the metrics themselves
 func NewGauge(gauge HermesGauge) error {
     opts := prometheus.GaugeOpts{Name: gauge.MetricName, Help: gauge.MetricDescription}
     // create new prometheus gauge
@@ -106,7 +165,10 @@ func NewGauge(gauge HermesGauge) error {
     return nil
 }
 
-// function use to create new counter
+// function used to create new counter instance. Pointers to the
+// prometheus counters are stored in the global Gauges map, which
+// maps the name of the counter/metric to the prometheus pointer
+// that stores the metrics themselves
 func NewCounter(counter HermesCounter) error {
     opts := prometheus.CounterOpts{Name: counter.MetricName, Help: counter.MetricDescription}
     // create new counter
@@ -117,7 +179,9 @@ func NewCounter(counter HermesCounter) error {
     return nil
 }
 
-// function used to initialize hermes metrics
+// function used to initialize hermes metrics by iterating
+// over the JSON configuration file and generating prometheus
+// Gauges/Counters for all the specified metrics
 func InitializeMetrics(config HermesConfig) error {
     Config = &config
     // create gauges from config

@@ -12,7 +12,7 @@ from hermes.exceptions import HermesConfigurationException, InvalidMetricExcepti
 
 
 SOCKET = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger('hermes')
 
 HERMES_HOST, HERMES_PORT = None, None
 
@@ -34,54 +34,3 @@ def push_udp_packet(payload: dict):
     """Function used to send UDP packet to hermes server"""
     payload = json.dumps(payload)
     SOCKET.sendto(bytes(payload, encoding='utf-8'), (HERMES_HOST, HERMES_PORT))
-
-def push_gauge(metric_name: str, value: float, labels: Dict[str, str]):
-    """Function used to push new UDP packet for
-    Gauge instance defined on Hermes Server. Inputs
-    are converted to Pydantic models for validation
-    before they are converted to JSON and pushed
-    to the Hermes Server
-
-    Arguments:
-        metric_name: str name of metric on Hermes Server
-        value: float value to set gauge to
-        labels: dict labels and their corresponding string
-            values
-    """
-    # set hermes configuration if not been set before
-    if None in (HERMES_HOST, HERMES_PORT):
-        LOGGER.warn('hermes configuration not set. setting host to default localhost:7789')
-        set_hermes_config()
-    try:
-        LOGGER.debug('pusing new gauge metric \'%s\' with value %d', metric_name, value)
-        payload = {'value': value, 'labels': labels}
-        gauge = PrometheusGauge(**{'metric_name': metric_name, 'payload': payload})
-        push_udp_packet(json.loads(gauge.json()))
-    except ValidationError:
-        LOGGER.exception('received invalid gauge configuration')
-        raise InvalidMetricException
-
-def push_counter(metric_name: str, labels: Dict[str, str]):
-    """Function used to push new UDP packet for
-    counter instance defined on Hermes Server.
-    Inputs are converted to Pydantic models for validation
-    before they are converted to JSON and pushed
-    to the Hermes Server
-
-    Arguments:
-        metric_name: str name of metric on Hermes Server
-        labels: dict labels and their corresponding string
-            values
-    """
-    # set hermes configuration if not been set before
-    if None in (HERMES_HOST, HERMES_PORT):
-        LOGGER.warn('hermes configuration not set. setting host to default localhost:7789')
-        set_hermes_config()
-    try:
-        LOGGER.debug('incrementing counter metric \'%s\'', metric_name)
-        payload = {'labels': labels}
-        counter = PrometheusCounter(**{'metric_name': metric_name, 'payload': payload})
-        push_udp_packet(json.loads(counter.json()))
-    except ValidationError:
-        LOGGER.exception('received invalid gauge configuration')
-        raise InvalidMetricException

@@ -87,26 +87,76 @@ installed with
 pip install python-hermes
 ```
 
-Two high-level utility functions are provided, mainly `push_gauge` and `push_counter`, which
-are used to push gauges and counters respectively. The following Python snippet illustrates
-how to use the client
+Two high-level utility functions are provided, along with context managers and
+decorators that can be used to automatically manage gauge and counter interfaces.
+See the examples in `example/python` directory for implementation examples
+
+### Counters
 
 ```python
-from hermes import push_gauge, push_counter, set_hermes_config
+import time
+from hermes import set_hermes_config, increment_counter, counter_wrapper
 
-# set hermes configuration
-set_hermes_config('localhost', 7789)
 
-# push new counter metric
-counter_data = {
-    'label_1': 'testing python client'
-}
-push_counter(metric_name='sample_counter', labels=counter_data)
+def example_job():
+    """Example job used to demonstrate counters
+    set manually using the provided functions"""
+    increment_counter('sample_counter', {'label_1': 'demo label 1'})
+    time.sleep(5)
 
-# set new gauge value
-gauge_data = {
-    'label_1': 'testing python client twice',
-    'label_2': 'testing python client thrice
-}
-push_gauge(metric_name='sample_gauge', value=65.6, labels=gauge_data)
+@counter_wrapper('sample_counter', {'label_1': 'demo label 1'})
+def example_job_wrapper_pre():
+    """Example job used to demonstrate counters
+    set with the decorator"""
+    print('this counter has been incremented on start')
+    time.sleep(5)
+
+@counter_wrapper('sample_counter', {'label_1': 'demo label 1'}, pre_execution=False)
+def example_job_wrapper_post():
+    """Example job used to demonstrate counters
+    set with the decorator"""
+    print('this counter will be incremented when im finished')
+    time.sleep(5)
+
+
+if __name__ == '__main__':
+
+    set_hermes_config('localost', 7789)
+    example_job_wrapper_post()
+```
+
+### Gauges
+
+```python
+from hermes import set_gauge, increment_gauge, decrement_gauge, \
+    hermes_gauge, gauge_wrapper, set_hermes_config
+
+
+def example_job():
+    """Example job used to demonstrate gauges
+    set manually using the provided functions"""
+    increment_gauge('sample_gauge', {'label_1': 'demo label 1', 'label_2': 'demo label 2'})
+    time.sleep(5)
+    decrement_gauge('sample_gauge', {'label_1': 'demo label 1', 'label_2': 'demo label 2'})
+
+def example_job_context():
+    """Example job used to demonstrate gauges set
+    with the context manager provided"""
+    labels = {'label_1': 'demo label 1', 'label_2': 'demo label 2'}
+    with hermes_gauge('sample_gauge', labels=labels):
+        print('this gauge has been incremented on start and will decrement when Im done')
+        time.sleep(5)
+
+@gauge_wrapper('sample_gauge', {'label_1': 'demo label 1', 'label_2': 'demo label 2'})
+def example_job_wrapper():
+    """Example job used to demonstrate gauges
+    set with the decorator"""
+    print('this gauge has been incremented on start and will decrement when Im done')
+    time.sleep(5)
+
+
+if __name__ == '__main__':
+
+    set_hermes_config('localost', 7789)
+    example_job_wrapper()
 ```
