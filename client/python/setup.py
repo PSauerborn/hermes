@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="python-hermes",
-    version="0.0.3",
+    version="0.0.4",
     description="Python client library for pushing metrics to Hermes server instance",
     url="https://github.com/PSauerborn/hermes",
     author="Pascal Sauerborn",

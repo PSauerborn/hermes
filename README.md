@@ -112,6 +112,34 @@ send to the Hermes server must have the following format
 }
 ```
 
+### Histograms
+
+```json
+{
+    "metric_name": "sample_histogram",
+    "payload": {
+        "labels": {
+            "label_1": "testing label 1"
+        },
+        "observation": 65.4
+    }
+}
+```
+
+### Summaries
+
+```json
+{
+    "metric_name": "sample_summary",
+    "payload": {
+        "labels": {
+            "label_1": "testing label 1"
+        },
+        "observation": 65.4
+    }
+}
+```
+
 Note that the labels defined in the JSON packets must match the labels defined in the
 `Hermes` configuration file
 
@@ -158,7 +186,7 @@ def example_job_wrapper_post():
 
 if __name__ == '__main__':
 
-    set_hermes_config('localost', 7789)
+    set_hermes_config('localhost', 7789)
     example_job_wrapper_post()
 ```
 
@@ -194,6 +222,64 @@ def example_job_wrapper():
 
 if __name__ == '__main__':
 
-    set_hermes_config('localost', 7789)
+    set_hermes_config('localhost', 7789)
     example_job_wrapper()
+```
+
+### Histograms
+
+```python
+from hermes import observe_histogram
+
+if __name__ == '__main__':
+
+    set_hermes_config('localhost', 7789)
+
+    labels = {'label_1': 'test-label'}
+    observe_histogram('sample_histogram', labels=labels, observation=6.54)
+```
+
+### Summaries
+
+```python
+from hermes import observe_summary
+
+if __name__ == '__main__':
+
+    set_hermes_config('localhost', 7789)
+
+    labels = {'label_1': 'test-label'}
+    observe_summary('sample_summary', labels=labels, observation=20.84)
+```
+
+## Go Client Library
+
+The `Hermes` package also ships with a `Go` client library. The following code snippet demonstrates
+how the Go Client can be used
+
+```go
+package main
+
+import (
+    "github.com/PSauerborn/hermes/client/go"
+)
+
+func main() {
+    // set configuration for Hermes client and increment sample counter
+    hermes_client.SetHermesConfig("localhost", 7789)
+
+    // increment counter metric over hermes server
+    hermes_client.IncrementCounter("sample_counter", map[string]string{"label_1": "test-label"})
+
+    // set gauge values over hermes server
+    hermes_client.IncrementGauge("sample_gauge", map[string]string{"label_1": "test-label", "label_2": "test-label-2"})
+    hermes_client.DecrementGauge("sample_gauge", map[string]string{"label_1": "test-label", "label_2": "test-label-2"})
+    hermes_client.SetGauge("sample_gauge", map[string]string{"label_1": "test-label", "label_2": "test-label-random"}, 54)
+
+    // make observation on histogram
+    hermes_client.ObserveHistogram("sample_histogram", map[string]string{"label_1": "test-label"}, 1233)
+
+    // make observation on summary
+    hermes_client.ObserveSummary("sample_summary", map[string]string{"label_1": "test-label"}, 5)
+}
 ```

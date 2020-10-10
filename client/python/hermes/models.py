@@ -25,6 +25,7 @@ class PrometheusGauge(BaseModel):
     metric_name: str
     payload: GaugePayload
 
+
 class CounterPayload(BaseModel):
     """Dataclass containing values for
     a Prometheus Counter instance"""
@@ -35,3 +36,29 @@ class PrometheusCounter(BaseModel):
     a Prometheus counter instance"""
     metric_name: str
     payload: CounterPayload
+
+
+class HistogramPayload(BaseModel):
+    """Dataclass containing values for
+    a Prometheus Histogram instance"""
+    labels: Dict[str, str]
+    observation: float
+
+class PrometheusHistogram(BaseModel):
+    """Dataclass containing values for
+    a Prometheus Histogram instance"""
+    metric_name: str
+    payload: HistogramPayload
+
+
+class SummaryPayload(BaseModel):
+    """Dataclass containing values for
+    a Prometheus Summary instance"""
+    labels: Dict[str, str]
+    observation: float
+
+class PrometheusSummary(BaseModel):
+    """Dataclass containing values for
+    a Prometheus Summary instance"""
+    metric_name: str
+    payload: SummaryPayload

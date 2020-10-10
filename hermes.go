@@ -120,22 +120,44 @@ func(server HermesServer) ProcessPayload(packet []byte) {
     // process payload depending on metric type
     switch *metricType {
     case "counter":
+        // process counter metrics
         log.Debug(fmt.Sprintf("processing 'counter' payload %+v", payload.Payload))
         var counter CounterJSON
         err := json.Unmarshal(bytesPayload, &counter)
         if err != nil {
-            log.Error(fmt.Sprintf("cannot process metric. invalid JSON"))
+            log.Error(fmt.Sprintf("cannot process 'counter' metric. invalid JSON"))
             return
         }
         IncrementCounter(payload.MetricName, counter)
+        // process gauge metrics
     case "gauge":
         log.Debug(fmt.Sprintf("processing 'gauge' payload %+v", payload.Payload))
         var gauge GaugeJSON
         err := json.Unmarshal(bytesPayload, &gauge)
         if err != nil {
-            log.Error(fmt.Sprintf("cannot process metric. invalid JSON"))
+            log.Error(fmt.Sprintf("cannot process 'gauge' metric. invalid JSON"))
             return
         }
         ProcessGauge(payload.MetricName, gauge)
+        // process histogram metrics
+    case "histogram":
+        log.Debug(fmt.Sprintf("processing 'histogram' payload %+v", payload.Payload))
+        var histogram HistogramJSON
+        err := json.Unmarshal(bytesPayload, &histogram)
+        if err != nil {
+            log.Error(fmt.Sprintf("cannot process 'histogram' metric. invalid JSON"))
+            return
+        }
+        ObserveHistogram(payload.MetricName, histogram)
+        // process summary metrics
+    case "summary":
+        log.Debug(fmt.Sprintf("processing 'summary' payload %+v", payload.Payload))
+        var summary SummaryJSON
+        err := json.Unmarshal(bytesPayload, &summary)
+        if err != nil {
+            log.Error(fmt.Sprintf("cannot process 'summary' metric. invalid JSON"))
+            return
+        }
+        ObserveSummary(payload.MetricName, summary)
     }
 }

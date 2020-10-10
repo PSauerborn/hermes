@@ -13,5 +13,19 @@
             "metric_description": "counters are awesome too",
             "labels": ["label_1"]
         }
+    ],
+    "histograms": [
+        {
+            "metric_name": "sample_histogram",
+            "metric_description": "histograms are neat",
+            "labels": ["label_1"]
+        }
+    ],
+    "summaries": [
+        {
+            "metric_name": "sample_summary",
+            "metric_description": "summaries work",
+            "labels": ["label_1"]
+        }
     ]
 }

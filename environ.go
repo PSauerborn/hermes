@@ -9,8 +9,7 @@ import (
 
 var (
     LogLevels = map[string]log.Level{ "DEBUG": log.DebugLevel, "INFO": log.InfoLevel, "WARN": log.WarnLevel }
-    ListenAddress string
-    ListenPort int
+    PrometheusListenPort int
     MaxBufferSize int
     ConfigFilePath string
 )
@@ -24,9 +23,7 @@ func ConfigureService() {
     } else {
         log.Fatal(fmt.Sprintf("received invalid log level %s", LogLevelString))
     }
-    // configure listen address and port from environment variables
-    ListenAddress = OverrideStringVariable("LISTEN_ADDRESS", "0.0.0.0")
-    ListenPort = OverrideIntegerVariable("LISTEN_PORT", 10091)
+    PrometheusListenPort = OverrideIntegerVariable("PROMETHEUS_LISTEN_PORT", 8080)
 
     MaxBufferSize = OverrideIntegerVariable("MAX_BUFFER_SIZE", 2048)
     ConfigFilePath = OverrideStringVariable("CONFIG_FILE_PATH", "./sample_config.json")
