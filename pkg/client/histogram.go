@@ -18,7 +18,7 @@ type HermesHistogramPayload struct {
 }
 
 // function used to make an observation on a histogram metric
-func ObserveHistogram(metricName string, labels map[string]string, observation float64) {
+func(c *HermesClient) ObserveHistogram(metricName string, labels map[string]string, observation float64) {
     log.Debug(fmt.Sprintf("setting observation on histogram %s", metricName))
     packet := HermesHistogramPacket{
         MetricName: metricName,
@@ -27,5 +27,5 @@ func ObserveHistogram(metricName string, labels map[string]string, observation f
             HistogramObservation: observation,
         },
     }
-    sendUdpPacket(packet)
+    c.SendUDPPacket(packet)
 }

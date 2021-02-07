@@ -18,7 +18,7 @@ type HermesSummaryPayload struct {
 }
 
 // function used to make an observation on a summary metric
-func ObserveSummary(metricName string, labels map[string]string, observation float64) {
+func(c *HermesClient) ObserveSummary(metricName string, labels map[string]string, observation float64) {
     log.Debug(fmt.Sprintf("setting observation on histogram %s", metricName))
     packet := HermesSummaryPacket{
         MetricName: metricName,
@@ -27,5 +27,5 @@ func ObserveSummary(metricName string, labels map[string]string, observation flo
             SummaryObservation: observation,
         },
     }
-    sendUdpPacket(packet)
+    c.SendUDPPacket(packet)
 }

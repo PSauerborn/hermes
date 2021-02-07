@@ -13,8 +13,9 @@ var (
     // create map to house environment variables
     cfg = utils.NewConfigMapWithValues(
         map[string]string{
-            "listen_port": "7832",
+            "listen_port": "7789",
             "listen_address": "0.0.0.0",
+            "hermes_config_path" : "/etc/hermes/config.json",
         },
     )
 )
@@ -27,5 +28,6 @@ func main() {
         panic("received invalid listen port")
     }
     // start new instance of hermes server
-    hermes.New("", cfg.Get("listen_address"), port).Listen()
+    hermes.New(cfg.Get("hermes_config_path"), cfg.Get("listen_address"),
+        port).Listen()
 }

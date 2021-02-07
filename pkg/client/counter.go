@@ -17,13 +17,14 @@ type HermesCounterPayload struct {
 }
 
 // function used to increment counter value
-func IncrementCounter(metricName string, labels map[string]string) {
+func(c *HermesClient) IncrementCounter(metricName string, labels map[string]string) {
     log.Debug(fmt.Sprintf("incrementing counter %s", metricName))
+    // generate UDP packet and send over client
     packet := HermesCounterPacket{
         MetricName: metricName,
         Payload: HermesCounterPayload{
             CounterLabels: labels,
         },
     }
-    sendUdpPacket(packet)
+    c.SendUDPPacket(packet)
 }
