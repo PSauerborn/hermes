@@ -2,6 +2,7 @@ package hermes_client
 
 import (
     "fmt"
+
     log "github.com/sirupsen/logrus"
 )
 

@@ -1,4 +1,4 @@
-package main
+package hermes
 
 
 // struct used to define the global hermes configuration
@@ -9,8 +9,6 @@ type HermesConfig struct {
     Counters      []HermesCounter   `json:"counters"`
     Histograms    []HermesHistogram `json:"histograms"`
     Summaries     []HermesSummary   `json:"summaries"`
-    ListenAddress *string           `json:"listen_address"`
-    ListenPort    *int              `json:"listen_port"`
 }
 
 // struct used to define a Gauge from the Hermes config

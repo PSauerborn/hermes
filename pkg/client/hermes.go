@@ -5,14 +5,15 @@ import (
     "net"
     "errors"
     "encoding/json"
+
     log "github.com/sirupsen/logrus"
 )
 
 var (
     hermesHost *string
     hermesPort *int
-    ErrHermesConnection = errors.New(fmt.Sprintf("cannot connect to hermes server"))
-    ErrHermesPacketJSON = errors.New("unable to convert hermes udp packet to JSON format")
+    ErrHermesConnection = errors.New("Cannot connect to hermes server")
+    ErrHermesPacketJSON = errors.New("Unable to convert hermes udp packet to JSON format")
 )
 
 // define function used to send UDP packet to Hermes

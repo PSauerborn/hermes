@@ -1,39 +1,41 @@
-package main
+package hermes
 
 import (
     "fmt"
     "errors"
     "net/http"
+
     "github.com/prometheus/client_golang/prometheus"
     "github.com/prometheus/client_golang/prometheus/promhttp"
     log "github.com/sirupsen/logrus"
+
+    "github.com/PSauerborn/hermes/pkg/utils"
 )
 
 var (
     Config *HermesConfig
 
-    // define maps used to store gauges
-    Gauges = map[string]*prometheus.GaugeVec{}
-    Counters = map[string]*prometheus.CounterVec{}
+    // define maps used to store metrics
+    Gauges     = map[string]*prometheus.GaugeVec{}
+    Counters   = map[string]*prometheus.CounterVec{}
     Histograms = map[string]*prometheus.HistogramVec{}
-    Summaries = map[string]*prometheus.SummaryVec{}
+    Summaries  = map[string]*prometheus.SummaryVec{}
 
-    // define errors
-    ErrInvalidGauge = errors.New("invalid gauge configuration")
-    ErrInvalidCounter = errors.New("invalid gauge configuration")
-    ErrUnregisteredMetric = errors.New("unregistered metric")
-    ErrInvalidGaugeOperation = errors.New("invalid gauge operation")
-    ErrInvalidLabels = errors.New("invalid label configuration")
+    // define custom errors for application
+    ErrInvalidGauge          = errors.New("Invalid gauge configuration")
+    ErrInvalidCounter        = errors.New("Invalid gauge configuration")
+    ErrUnregisteredMetric    = errors.New("Unregistered metric")
+    ErrInvalidGaugeOperation = errors.New("Invalid gauge operation")
+    ErrInvalidLabels         = errors.New("Invalid label configuration")
 )
 
 // function used to start new prometheus server
 // to scrape metrics from Hermes
-func ListenPrometheus(config HermesConfig) {
+func ListenPrometheus(config HermesConfig, listenPort int) {
     // create prometheus metric objects from configuration
     InitializeMetrics(config)
-
     // create http interface to listen for prometheus scrape jobs
-    connectionString := fmt.Sprintf(":%d", PrometheusListenPort)
+    connectionString := fmt.Sprintf(":%d", listenPort)
     http.Handle("/metrics", promhttp.Handler())
     log.Fatal(http.ListenAndServe(connectionString, nil))
 }
@@ -46,82 +48,65 @@ func InitializeMetrics(config HermesConfig) error {
     // create gauges from config
     for _, gauge := range(config.Gauges) {
         log.Debug(fmt.Sprintf("creating new gauge from config %+v", gauge))
-        err := NewGauge(gauge)
-        if err != nil {
+        if err := NewGauge(gauge); err != nil {
             log.Fatal(fmt.Errorf("unable to create new gauge: %v", err))
         }
     }
     // create counters from config
     for _, counter := range(config.Counters) {
         log.Debug(fmt.Sprintf("creating new counter from config %+v", counter))
-        err := NewCounter(counter)
-        if err != nil {
+        if err := NewCounter(counter); err != nil {
             log.Fatal(fmt.Errorf("unable to create new counter: %v", err))
         }
     }
-    // create counters from config
+    // create histograms from config
     for _, histogram := range(config.Histograms) {
-        log.Debug(fmt.Sprintf("creating new counter from config %+v", histogram))
-        err := NewHistogram(histogram)
-        if err != nil {
+        log.Debug(fmt.Sprintf("creating new histogram from config %+v", histogram))
+        if err := NewHistogram(histogram); err != nil {
             log.Fatal(fmt.Errorf("unable to create new histogram: %v", err))
         }
     }
-    // create counters from config
+    // create summaries from config
     for _, summary := range(config.Summaries) {
-        log.Debug(fmt.Sprintf("creating new counter from config %+v", summary))
-        err := NewSummary(summary)
-        if err != nil {
+        log.Debug(fmt.Sprintf("creating new summary from config %+v", summary))
+        if err := NewSummary(summary); err != nil {
             log.Fatal(fmt.Errorf("unable to create new summary: %v", err))
         }
     }
     return nil
 }
 
-// function used to determine the metric type i.e.
+// function used to determine the metric type
 // based on a particular metric name
-func GetMetricType(metric string) *string {
+func GetMetricType(metric string) (string, error) {
     // check if metric is present in registered counters
     if _, ok := Counters[metric]; ok {
-        metricType := "counter"
-        return &metricType
+        return "counter", nil
     }
     // check if metric is present in registered gauges
     if _, ok := Gauges[metric]; ok {
-        metricType := "gauge"
-        return &metricType
+        return "gauge", nil
     }
     // check if metric is present in registered histograms
     if _, ok := Histograms[metric]; ok {
-        metricType := "histogram"
-        return &metricType
+        return "histogram", nil
     }
-    // check if metric is present in registered histograms
+    // check if metric is present in registered summaries
     if _, ok := Summaries[metric]; ok {
-        metricType := "summary"
-        return &metricType
+        return "summary", nil
     }
-    return nil
+    return "", ErrUnregisteredMetric
 }
 
-// function used to determine if a slice of strings
-// contains a particular item/string
-func SliceContains(slice []string, val string) bool {
-    for _, value := range(slice) {
-        if value == val {
-            return true
-        }
-    }
-    return false
-}
-
-// function sued to determine if a given set of labels
+// function used to determine if a given set of labels
 // matches the label configuration expected for the
 // specified metric
 func IsValidLabelConfig(receivedLabels map[string]string, expectedLabels []string) bool {
-    // iterate over keys of expected labels
+    // iterate over keys of given labels and check if key
+    // is present in labels defined in JSON config
     for key := range(receivedLabels) {
-        if !SliceContains(expectedLabels, key) {
+        // return false if any supplied label is NOT in defined config
+        if !utils.SliceContains(expectedLabels, key) {
             return false
         }
     }
@@ -132,10 +117,14 @@ func IsValidLabelConfig(receivedLabels map[string]string, expectedLabels []strin
 // by filtering out the lables that are included both on the global
 // hermes configuration file and the JSON from the UDP packet
 func SetPrometheusLabels(labels map[string]string, labelConfig []string) (prometheus.Labels, error) {
+
+    // check that labels from payload match labels defined in config
     if !IsValidLabelConfig(labels, labelConfig) {
-        log.Error(fmt.Sprintf("invalid label configuration. expecting %d but received %d", len(labels), len(labelConfig)))
+        log.Error(fmt.Sprintf("invalid label configuration. expecting %d but received %d",
+            len(labels), len(labelConfig)))
         return prometheus.Labels{}, ErrInvalidLabels
     }
+    // generate prometheus label instance and add labels given in payload
     promLabels := prometheus.Labels{}
     for _, metricLabel := range(labelConfig) {
         if label, ok := labels[metricLabel]; ok {
@@ -149,8 +138,12 @@ func SetPrometheusLabels(labels map[string]string, labelConfig []string) (promet
 // note that the labels provided in the UDP packet are not set
 // on the counter/gauge unless they have also been defined in
 // the JSON config file
-func GenerateLabels(labels map[string]string, metricType, metricName string) (prometheus.Labels, error) {
+func GenerateLabels(labels map[string]string, metricType,
+    metricName string) (prometheus.Labels, error) {
+
     var (promLabels prometheus.Labels; err error)
+    // retrieve labels registered for metric in config
+    // and set against lables provided in payload
     switch metricType {
     case "counter":
         for _, counter := range(Config.Counters) {

@@ -1,4 +1,4 @@
-package main
+package hermes
 
 import (
     "os"
@@ -10,14 +10,14 @@ import (
 )
 
 var (
-    ErrInvalidConfig = errors.New("invalid hermes configuration")
+    ErrInvalidConfig = errors.New("Invalid hermes configuration")
 )
 
 // function used to generate HermesConfig instance from
 // the local JSON configuration file. Additionally, if
 // the listen address and port are not specified, the default
 // values are assigned to the config
-func LoadConfig(path string) (HermesConfig, error) {
+func LoadHermesConfig(path string) (HermesConfig, error) {
     var config HermesConfig
 
     configFile, err := os.Open(path)
@@ -37,14 +37,6 @@ func LoadConfig(path string) (HermesConfig, error) {
     if err != nil {
         log.Error(fmt.Errorf("cannot load local JSON configuration: %v", err))
         return config, ErrInvalidConfig
-    }
-    // set default listen address if not specified
-    if config.ListenAddress == nil {
-        address := "0.0.0.0"; config.ListenAddress = &address
-    }
-    // set default listen port if not specified
-    if config.ListenPort == nil {
-        port := 7789; config.ListenPort = &port
     }
     return config, nil
 }

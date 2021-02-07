@@ -1,9 +1,10 @@
-package main
+package hermes
 
 import (
-	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+    "fmt"
+
+    "github.com/prometheus/client_golang/prometheus"
+    log "github.com/sirupsen/logrus"
 )
 
 // function used to increment a particular counter
