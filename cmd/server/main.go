@@ -1,6 +1,7 @@
 package main
 
 import (
+    "strings"
     "strconv"
 
     log "github.com/sirupsen/logrus"
@@ -16,12 +17,29 @@ var (
             "listen_port": "7789",
             "listen_address": "0.0.0.0",
             "hermes_config_path" : "/etc/hermes/config.json",
+            "log_level": "INFO",
         },
     )
 )
 
+// function to set log level from environment variables
+func SetLogLevel() {
+    level := cfg.Get("log_level")
+    switch strings.ToUpper(level) {
+    case "DEBUG":
+        log.SetLevel(log.DebugLevel)
+    case "INFO":
+        log.SetLevel(log.InfoLevel)
+    case "WARN":
+        log.SetLevel(log.WarnLevel)
+    case "ERROR":
+        log.SetLevel(log.ErrorLevel)
+    }
+}
+
 func main() {
-    log.SetLevel(log.DebugLevel)
+    // set log level for server
+    SetLogLevel()
 
     port, err := strconv.Atoi(cfg.Get("listen_port"))
     if err != nil {

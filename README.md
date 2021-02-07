@@ -292,5 +292,4 @@ func main() {
     client.ObserveSummary("sample_summary",
         map[string]string{"label_1": "test-label"}, 5)
 }
-}
 ```
